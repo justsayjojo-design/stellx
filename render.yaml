@@ -1,0 +1,17 @@
+# render.yaml
+services:
+  - type: web
+    name: stellx-satellite-ops
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn satellite_ops_engine:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+        placeholder: "Enter your OpenAI API key"
+      - key: OPENAI_MODEL
+        value: "gpt-4o"
+      - key: TICK_SECONDS
+        value: "6"
+      - key: SEVERE_ANOMALY_ODDS
+        value: "50"
