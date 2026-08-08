@@ -19,7 +19,10 @@ from openai import OpenAI
 # -----------------------------
 from config import OPENAI_API_KEY, OPENAI_MODEL, TICK_SECONDS, SEVERE_ANOMALY_ODDS
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = OpenAI(
+    base_url="https://integrate.api.nvidia.com/v1",
+    api_key=OPENAI_API_KEY
+)
 
 app = FastAPI(title="Satellite Ops Engine", version="1.0")
 
