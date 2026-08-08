@@ -8,7 +8,7 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -1692,9 +1692,34 @@ def get_next_telemetry() -> Dict[str, Any]:
     return engine.tick()
 
 
+@app.get("/telemetry/packet")
+def get_telemetry_packet() -> Dict[str, Any]:
+    """
+    Lightweight telemetry-only endpoint intended for low-resource clients
+    (ESP32, microcontrollers). Returns only the telemetry packet quickly
+    without invoking the OpenAI model.
+    """
+    return engine.next_packet()
+
+
 @app.post("/telemetry/fault-injection")
 def fault_injection(req: FaultInjectionRequest) -> Dict[str, Any]:
     return engine.tick_with_fault(req.fault_type)
+
+
+@app.post("/telemetry/analyze")
+def analyze_telemetry(telemetry: Optional[Dict[str, Any]] = Body(None)) -> Dict[str, Any]:
+    """
+    Analyze provided telemetry with the GPT-OSS model and return an operations plan.
+    If no telemetry payload is provided, a fresh nominal packet will be generated and analyzed.
+    Request body (optional): JSON telemetry object matching the telemetry packet format.
+    Response: { "telemetry": {...}, "plan": {...} }
+    """
+    if telemetry is None:
+        telemetry = engine.next_packet()
+
+    plan = engine.build_plan(telemetry)
+    return {"telemetry": telemetry, "plan": plan}
 
 
 # -----------------------------
@@ -1712,9 +1737,8 @@ def run_console() -> None:
 
 
 if __name__ == "__main__":
-    # Uncomment one of these:
-    # 1) Console stream mode
-    run_console()
+    # If executed directly, run the FastAPI app with uvicorn so Render
+    # (or other process managers) will serve the HTTP endpoints.
+    import uvicorn
 
-    # 2) API mode:
-    # uvicorn satellite_ops_engine:app --reload --host 0.0.0.0 --port 8000
+    uvicorn.run("satellite_ops_engine:app", host=HOST, port=PORT)
